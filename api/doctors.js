@@ -1,14 +1,30 @@
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
+
+neonConfig.webSocketConstructor = ws;
+
 export default async function handler(req, res) {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  
   try {
-    // Simple test response
-    const doctors = [
-      { id: "1", name: "Dr. Smith", specialization: "Cardiology", isAvailable: true },
-      { id: "2", name: "Dr. Johnson", specialization: "Pediatrics", isAvailable: false },
-      { id: "3", name: "Dr. Williams", specialization: "General Practice", isAvailable: true }
-    ];
+    const result = await pool.query('SELECT * FROM doctors ORDER BY name');
     
-    res.status(200).json(doctors);
+    const doctors = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      specialization: row.specialization,
+      phone: row.phone,
+      email: row.email,
+      isAvailable: row.is_available,
+      location: row.location,
+      createdAt: row.created_at
+    }));
+    
+    res.json(doctors);
   } catch (error) {
-    res.status(500).json({ message: 'API Error' });
+    console.error('Database error:', error);
+    res.status(500).json({ message: 'Database error', error: error.message });
+  } finally {
+    await pool.end();
   }
 }
