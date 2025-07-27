@@ -1,13 +1,35 @@
-// Simple in-memory storage for demo purposes
+// Simple in-memory storage for demo
 let queueItems = [];
 let nextQueueNumber = 1;
 
 export default async function handler(req, res) {
   try {
-    console.log('Queue API called:', req.method);
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const pathParts = url.pathname.split('/');
     
+    console.log('Queue API called:', req.method, url.pathname);
+    
+    // Check if this is a status update request like /api/queue/some-id
+    if (pathParts.length === 4 && pathParts[3] && req.method === 'PUT') {
+      const itemId = pathParts[3];
+      const { status } = req.body;
+      
+      console.log('Updating status for item:', itemId, 'to:', status);
+      
+      const itemIndex = queueItems.findIndex(item => item.id === itemId);
+      if (itemIndex === -1) {
+        return res.status(404).json({ message: 'Queue item not found' });
+      }
+      
+      queueItems[itemIndex].status = status;
+      queueItems[itemIndex].updatedAt = new Date().toISOString();
+      
+      console.log('Updated item:', queueItems[itemIndex]);
+      return res.status(200).json(queueItems[itemIndex]);
+    }
+    
+    // Regular queue operations
     if (req.method === 'GET') {
-      // Return all queue items
       res.status(200).json(queueItems);
       
     } else if (req.method === 'POST') {
@@ -15,12 +37,10 @@ export default async function handler(req, res) {
       
       if (!patientData || !queueData) {
         return res.status(400).json({ 
-          message: 'Missing patientData or queueData',
-          received: req.body 
+          message: 'Missing patientData or queueData'
         });
       }
       
-      // Create a new queue item
       const queueItem = {
         id: `queue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         queueNumber: nextQueueNumber++,
@@ -36,29 +56,9 @@ export default async function handler(req, res) {
         }
       };
       
-      // Add to our in-memory storage
       queueItems.push(queueItem);
-      
       console.log('Added queue item:', queueItem);
-      console.log('Total queue items:', queueItems.length);
-      
       res.status(201).json(queueItem);
-      
-    } else if (req.method === 'PUT') {
-      // Handle status updates
-      const pathParts = req.url.split('/');
-      const itemId = pathParts[pathParts.length - 1];
-      const { status } = req.body;
-      
-      const itemIndex = queueItems.findIndex(item => item.id === itemId);
-      if (itemIndex === -1) {
-        return res.status(404).json({ message: 'Queue item not found' });
-      }
-      
-      queueItems[itemIndex].status = status;
-      queueItems[itemIndex].updatedAt = new Date().toISOString();
-      
-      res.status(200).json(queueItems[itemIndex]);
       
     } else {
       res.status(405).json({ message: 'Method not allowed' });
