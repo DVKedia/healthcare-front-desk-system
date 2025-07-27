@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(218, 13%, 11%);
+  --muted: hsl(210, 40%, 96%);
+  --muted-foreground: hsl(215, 13%, 45%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(218, 13%, 11%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(218, 13%, 11%);
+  --border: hsl(214, 32%, 91%);
+  --input: hsl(214, 32%, 91%);
+  --primary: hsl(218, 91%, 60%);
+  --primary-foreground: hsl(0, 0%, 98%);
+  --secondary: hsl(210, 40%, 96%);
+  --secondary-foreground: hsl(222, 84%, 5%);
+  --accent: hsl(210, 40%, 96%);
+  --accent-foreground: hsl(222, 84%, 5%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(218, 91%, 60%);
+  --radius: 0.5rem;
+  
+  /* Medical theme colors */
+  --medical-blue: hsl(218, 91%, 60%);
+  --healthcare-green: hsl(166, 100%, 37%);
+  --alert-red: hsl(0, 84%, 46%);
+  --status-success: hsl(166, 76%, 37%);
+  --status-warning: hsl(43, 96%, 56%);
+  --status-error: hsl(0, 72%, 51%);
+}
+
+.dark {
+  --background: hsl(222, 87%, 4%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 33%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 87%, 4%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 87%, 4%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 33%, 17%);
+  --input: hsl(217, 33%, 17%);
+  --primary: hsl(218, 91%, 60%);
+  --primary-foreground: hsl(0, 0%, 98%);
+  --secondary: hsl(217, 33%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 33%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 63%, 31%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(224, 71%, 4%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-medical-blue {
+    color: var(--medical-blue);
+  }
+  
+  .bg-medical-blue {
+    background-color: var(--medical-blue);
+  }
+  
+  .text-healthcare-green {
+    color: var(--healthcare-green);
+  }
+  
+  .bg-healthcare-green {
+    background-color: var(--healthcare-green);
+  }
+  
+  .text-alert-red {
+    color: var(--alert-red);
+  }
+  
+  .bg-alert-red {
+    background-color: var(--alert-red);
+  }
+  
+  .text-status-success {
+    color: var(--status-success);
+  }
+  
+  .text-status-warning {
+    color: var(--status-warning);
+  }
+  
+  .text-status-error {
+    color: var(--status-error);
+  }
+}
+
+/* Professional medical interface styling */
+.font-inter {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Smooth transitions for interactive elements */
+.transition-shadow {
+  transition: box-shadow 0.15s ease-in-out;
+}
+
+.transition-colors {
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+/* Custom focus styles for better accessibility */
+.focus\:ring-medical-blue:focus {
+  --tw-ring-color: var(--medical-blue);
+}
+
+.focus\:border-transparent:focus {
+  border-color: transparent;
+}
