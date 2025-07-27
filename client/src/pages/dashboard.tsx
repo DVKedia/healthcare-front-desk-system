@@ -20,14 +20,10 @@ export default function Dashboard() {
   const [isBookAppointmentOpen, setIsBookAppointmentOpen] = useState(false);
 
   const handleAddWalkIn = () => {
-    console.log("Add Walk-in button clicked");
-    console.log("Current modal state:", isAddWalkInOpen);
     setIsAddWalkInOpen(true);
-    console.log("Modal state set to true");
   };
 
   const handleBookAppointment = () => {
-    console.log("Book Appointment button clicked");
     setIsBookAppointmentOpen(true);
   };
 
@@ -160,17 +156,11 @@ export default function Dashboard() {
       {/* Modals */}
       <AddWalkInModal 
         isOpen={isAddWalkInOpen} 
-        onClose={() => {
-          console.log("Closing AddWalkIn modal");
-          setIsAddWalkInOpen(false);
-        }} 
+        onClose={() => setIsAddWalkInOpen(false)} 
       />
       <BookAppointmentModal 
         isOpen={isBookAppointmentOpen} 
-        onClose={() => {
-          console.log("Closing BookAppointment modal");
-          setIsBookAppointmentOpen(false);
-        }} 
+        onClose={() => setIsBookAppointmentOpen(false)} 
       />
     </div>
   );
