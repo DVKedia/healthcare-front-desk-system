@@ -1,36 +1,45 @@
-// Simple in-memory storage for demo
-let queueItems = [];
-let nextQueueNumber = 1;
+// Global storage for the serverless environment
+global.queueItems = global.queueItems || [];
+global.nextQueueNumber = global.nextQueueNumber || 1;
 
 export default async function handler(req, res) {
   try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const pathParts = url.pathname.split('/');
+    console.log('Queue API called:', req.method, req.url);
     
-    console.log('Queue API called:', req.method, url.pathname);
+    // Parse the URL to handle dynamic routes like /api/queue/some-id
+    const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
+    const pathSegments = url.pathname.split('/').filter(Boolean);
     
-    // Check if this is a status update request like /api/queue/some-id
-    if (pathParts.length === 4 && pathParts[3] && req.method === 'PUT') {
-      const itemId = pathParts[3];
+    // Check if this is a status update: /api/queue/{id}
+    if (pathSegments.length === 3 && req.method === 'PUT') {
+      const itemId = pathSegments[2]; // The ID from the URL
       const { status } = req.body;
       
-      console.log('Updating status for item:', itemId, 'to:', status);
+      console.log('Status update for item:', itemId, 'to status:', status);
+      console.log('Current queue items:', global.queueItems.length);
       
-      const itemIndex = queueItems.findIndex(item => item.id === itemId);
+      const itemIndex = global.queueItems.findIndex(item => item.id === itemId);
       if (itemIndex === -1) {
-        return res.status(404).json({ message: 'Queue item not found' });
+        console.log('Item not found:', itemId);
+        return res.status(404).json({ 
+          message: 'Queue item not found',
+          itemId: itemId,
+          availableIds: global.queueItems.map(item => item.id)
+        });
       }
       
-      queueItems[itemIndex].status = status;
-      queueItems[itemIndex].updatedAt = new Date().toISOString();
+      // Update the status
+      global.queueItems[itemIndex].status = status;
+      global.queueItems[itemIndex].updatedAt = new Date().toISOString();
       
-      console.log('Updated item:', queueItems[itemIndex]);
-      return res.status(200).json(queueItems[itemIndex]);
+      console.log('Successfully updated item:', global.queueItems[itemIndex]);
+      return res.status(200).json(global.queueItems[itemIndex]);
     }
     
     // Regular queue operations
     if (req.method === 'GET') {
-      res.status(200).json(queueItems);
+      console.log('Returning queue items:', global.queueItems.length);
+      res.status(200).json(global.queueItems);
       
     } else if (req.method === 'POST') {
       const { patientData, queueData } = req.body;
@@ -43,7 +52,7 @@ export default async function handler(req, res) {
       
       const queueItem = {
         id: `queue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        queueNumber: nextQueueNumber++,
+        queueNumber: global.nextQueueNumber++,
         reason: queueData.reason || 'General Visit',
         status: 'waiting',
         isUrgent: queueData.isUrgent || false,
@@ -56,7 +65,7 @@ export default async function handler(req, res) {
         }
       };
       
-      queueItems.push(queueItem);
+      global.queueItems.push(queueItem);
       console.log('Added queue item:', queueItem);
       res.status(201).json(queueItem);
       
@@ -67,7 +76,8 @@ export default async function handler(req, res) {
     console.error('Queue API error:', error);
     res.status(500).json({ 
       message: 'Queue API Error', 
-      error: error.message
+      error: error.message,
+      stack: error.stack
     });
   }
 }
