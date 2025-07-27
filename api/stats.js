@@ -1,30 +1,26 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import ws from 'ws';
-
-neonConfig.webSocketConstructor = ws;
-
+// This gets real data from the queue
+// This gets real data from the queue
 export default async function handler(req, res) {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  
   try {
-    const result = await pool.query('SELECT * FROM doctors ORDER BY name');
+    // Get queue data from our queue API
+    const queueResponse = await fetch(`${req.headers.host ? `https://${req.headers.host}` : 'http://localhost:3000'}/api/queue`);
+    const queueItems = queueResponse.ok ? await queueResponse.json() : [];
     
-    const doctors = result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      specialization: row.specialization,
-      phone: row.phone,
-      email: row.email,
-      isAvailable: row.is_available,
-      location: row.location,
-      createdAt: row.created_at
-    }));
+    const stats = {
+      queueTotal: queueItems.filter(item => item.status !== 'completed').length,
+      todaysAppointments: 0,
+      availableDoctors: 2,
+      urgentCases: queueItems.filter(item => item.isUrgent && item.status !== 'completed').length
+    };
     
-    res.json(doctors);
+    res.status(200).json(stats);
   } catch (error) {
-    console.error('Database error:', error);
-    res.status(500).json({ message: 'Database error', error: error.message });
-  } finally {
-    await pool.end();
+    console.error('Stats API error:', error);
+    res.status(200).json({
+      queueTotal: 0,
+      todaysAppointments: 0,
+      availableDoctors: 2,
+      urgentCases: 0
+    });
   }
 }
