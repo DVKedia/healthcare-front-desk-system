@@ -1,27 +1,36 @@
-// Simple version without complex imports
 export default async function handler(req, res) {
   try {
     console.log('Queue API called:', req.method);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
     
     if (req.method === 'GET') {
       // Return empty array for now
       res.status(200).json([]);
       
     } else if (req.method === 'POST') {
-      console.log('POST data:', req.body);
+      // Extract data from the nested structure the frontend sends
+      const { patientData, queueData } = req.body;
       
-      // Simulate adding to queue
+      if (!patientData || !queueData) {
+        return res.status(400).json({ 
+          message: 'Missing patientData or queueData',
+          received: req.body 
+        });
+      }
+      
+      // Create a queue item that matches the expected format
       const queueItem = {
         id: `queue-${Date.now()}`,
         queueNumber: 1,
-        reason: req.body.reason || 'General Visit',
+        reason: queueData.reason || 'General Visit',
         status: 'waiting',
-        isUrgent: req.body.isUrgent || false,
+        isUrgent: queueData.isUrgent || false,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         patient: {
           id: `patient-${Date.now()}`,
-          name: req.body.name || 'Test Patient',
-          phone: req.body.phone || '000-000-0000'
+          name: patientData.name || 'Test Patient',
+          phone: patientData.phone || '000-000-0000'
         }
       };
       
@@ -36,7 +45,7 @@ export default async function handler(req, res) {
     res.status(500).json({ 
       message: 'Queue API Error', 
       error: error.message,
-      stack: error.stack 
+      body: req.body
     });
   }
 }
