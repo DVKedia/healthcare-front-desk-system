@@ -19,6 +19,18 @@ export default function Dashboard() {
   const [isAddWalkInOpen, setIsAddWalkInOpen] = useState(false);
   const [isBookAppointmentOpen, setIsBookAppointmentOpen] = useState(false);
 
+  const handleAddWalkIn = () => {
+    console.log("Add Walk-in button clicked");
+    console.log("Current modal state:", isAddWalkInOpen);
+    setIsAddWalkInOpen(true);
+    console.log("Modal state set to true");
+  };
+
+  const handleBookAppointment = () => {
+    console.log("Book Appointment button clicked");
+    setIsBookAppointmentOpen(true);
+  };
+
   const { data: stats, isLoading: statsLoading } = useQuery<Stats>({
     queryKey: ["/api/stats"],
   });
@@ -130,29 +142,35 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Queue Management */}
           <div className="lg:col-span-2">
-            <QueueManagement onAddWalkIn={() => setIsAddWalkInOpen(true)} />
+            <QueueManagement onAddWalkIn={handleAddWalkIn} />
           </div>
 
           {/* Doctor Management Sidebar */}
           <div className="space-y-6">
-            <DoctorManagement onBookAppointment={() => setIsBookAppointmentOpen(true)} />
+            <DoctorManagement onBookAppointment={handleBookAppointment} />
           </div>
         </div>
 
         {/* Appointment Management Section */}
         <div className="mt-8">
-          <AppointmentManagement onNewAppointment={() => setIsBookAppointmentOpen(true)} />
+          <AppointmentManagement onNewAppointment={handleBookAppointment} />
         </div>
       </div>
 
       {/* Modals */}
       <AddWalkInModal 
         isOpen={isAddWalkInOpen} 
-        onClose={() => setIsAddWalkInOpen(false)} 
+        onClose={() => {
+          console.log("Closing AddWalkIn modal");
+          setIsAddWalkInOpen(false);
+        }} 
       />
       <BookAppointmentModal 
         isOpen={isBookAppointmentOpen} 
-        onClose={() => setIsBookAppointmentOpen(false)} 
+        onClose={() => {
+          console.log("Closing BookAppointment modal");
+          setIsBookAppointmentOpen(false);
+        }} 
       />
     </div>
   );
