@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, relations } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -108,3 +108,35 @@ export type AppointmentWithDetails = Appointment & {
   patient: Patient;
   doctor: Doctor;
 };
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  // Add relations if needed for users
+}));
+
+export const doctorsRelations = relations(doctors, ({ many }) => ({
+  appointments: many(appointments),
+}));
+
+export const patientsRelations = relations(patients, ({ many }) => ({
+  queueItems: many(queueItems),
+  appointments: many(appointments),
+}));
+
+export const queueItemsRelations = relations(queueItems, ({ one }) => ({
+  patient: one(patients, {
+    fields: [queueItems.patientId],
+    references: [patients.id],
+  }),
+}));
+
+export const appointmentsRelations = relations(appointments, ({ one }) => ({
+  patient: one(patients, {
+    fields: [appointments.patientId],
+    references: [patients.id],
+  }),
+  doctor: one(doctors, {
+    fields: [appointments.doctorId],
+    references: [doctors.id],
+  }),
+}));

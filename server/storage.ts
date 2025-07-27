@@ -10,8 +10,15 @@ import {
   type QueueItemWithPatient,
   type Appointment,
   type InsertAppointment,
-  type AppointmentWithDetails
+  type AppointmentWithDetails,
+  users,
+  doctors,
+  patients,
+  queueItems,
+  appointments
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, max } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -51,247 +58,251 @@ export interface IStorage {
   deleteAppointment(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User> = new Map();
-  private doctors: Map<string, Doctor> = new Map();
-  private patients: Map<string, Patient> = new Map();
-  private queueItems: Map<string, QueueItem> = new Map();
-  private appointments: Map<string, Appointment> = new Map();
+export class DatabaseStorage implements IStorage {
+  private initialized = false;
 
   constructor() {
-    this.initializeData();
+    // Initialize asynchronously to avoid blocking constructor
+    this.initializeData().catch(console.error);
   }
 
-  private initializeData() {
-    // Initialize some sample doctors
-    const sampleDoctors: InsertDoctor[] = [
-      { name: "Dr. Smith", specialization: "Cardiology", phone: "(555) 101-1001", email: "smith@clinic.com", isAvailable: true },
-      { name: "Dr. Johnson", specialization: "Pediatrics", phone: "(555) 101-1002", email: "johnson@clinic.com", isAvailable: false },
-      { name: "Dr. Williams", specialization: "General Practice", phone: "(555) 101-1003", email: "williams@clinic.com", isAvailable: true },
-    ];
+  private async initializeData() {
+    if (this.initialized) return;
+    
+    try {
+      // Check if doctors already exist
+      const existingDoctors = await db.select().from(doctors).limit(1);
+      if (existingDoctors.length > 0) {
+        this.initialized = true;
+        return;
+      }
 
-    sampleDoctors.forEach(doctor => {
-      this.createDoctor(doctor);
-    });
+      // Initialize some sample doctors
+      const sampleDoctors: InsertDoctor[] = [
+        { name: "Dr. Smith", specialization: "Cardiology", phone: "(555) 101-1001", email: "smith@clinic.com", isAvailable: true },
+        { name: "Dr. Johnson", specialization: "Pediatrics", phone: "(555) 101-1002", email: "johnson@clinic.com", isAvailable: false },
+        { name: "Dr. Williams", specialization: "General Practice", phone: "(555) 101-1003", email: "williams@clinic.com", isAvailable: true },
+      ];
+
+      for (const doctor of sampleDoctors) {
+        await this.createDoctor(doctor);
+      }
+      
+      this.initialized = true;
+    } catch (error) {
+      console.error("Failed to initialize database:", error);
+    }
   }
 
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   // Doctor operations
   async getDoctors(): Promise<Doctor[]> {
-    return Array.from(this.doctors.values());
+    return await db.select().from(doctors);
   }
 
   async getDoctor(id: string): Promise<Doctor | undefined> {
-    return this.doctors.get(id);
+    const [doctor] = await db.select().from(doctors).where(eq(doctors.id, id));
+    return doctor || undefined;
   }
 
   async createDoctor(insertDoctor: InsertDoctor): Promise<Doctor> {
-    const id = randomUUID();
-    const doctor: Doctor = { 
-      ...insertDoctor, 
-      id, 
-      createdAt: new Date() 
-    };
-    this.doctors.set(id, doctor);
+    const [doctor] = await db
+      .insert(doctors)
+      .values(insertDoctor)
+      .returning();
     return doctor;
   }
 
   async updateDoctor(id: string, doctorUpdate: Partial<InsertDoctor>): Promise<Doctor | undefined> {
-    const existing = this.doctors.get(id);
-    if (!existing) return undefined;
-
-    const updated: Doctor = { ...existing, ...doctorUpdate };
-    this.doctors.set(id, updated);
-    return updated;
+    const [doctor] = await db
+      .update(doctors)
+      .set(doctorUpdate)
+      .where(eq(doctors.id, id))
+      .returning();
+    return doctor || undefined;
   }
 
   async deleteDoctor(id: string): Promise<boolean> {
-    return this.doctors.delete(id);
+    const result = await db.delete(doctors).where(eq(doctors.id, id));
+    return result.rowCount > 0;
   }
 
   // Patient operations
   async getPatients(): Promise<Patient[]> {
-    return Array.from(this.patients.values());
+    return await db.select().from(patients);
   }
 
   async getPatient(id: string): Promise<Patient | undefined> {
-    return this.patients.get(id);
+    const [patient] = await db.select().from(patients).where(eq(patients.id, id));
+    return patient || undefined;
   }
 
   async getPatientByPhone(phone: string): Promise<Patient | undefined> {
-    return Array.from(this.patients.values()).find(patient => patient.phone === phone);
+    const [patient] = await db.select().from(patients).where(eq(patients.phone, phone));
+    return patient || undefined;
   }
 
   async createPatient(insertPatient: InsertPatient): Promise<Patient> {
-    const id = randomUUID();
-    const patient: Patient = { 
-      ...insertPatient, 
-      id, 
-      createdAt: new Date() 
-    };
-    this.patients.set(id, patient);
+    const [patient] = await db
+      .insert(patients)
+      .values(insertPatient)
+      .returning();
     return patient;
   }
 
   async updatePatient(id: string, patientUpdate: Partial<InsertPatient>): Promise<Patient | undefined> {
-    const existing = this.patients.get(id);
-    if (!existing) return undefined;
-
-    const updated: Patient = { ...existing, ...patientUpdate };
-    this.patients.set(id, updated);
-    return updated;
+    const [patient] = await db
+      .update(patients)
+      .set(patientUpdate)
+      .where(eq(patients.id, id))
+      .returning();
+    return patient || undefined;
   }
 
   // Queue operations
   async getQueueItems(): Promise<QueueItemWithPatient[]> {
-    const items: QueueItemWithPatient[] = [];
-    for (const queueItem of this.queueItems.values()) {
-      const patient = this.patients.get(queueItem.patientId);
-      if (patient) {
-        items.push({ ...queueItem, patient });
-      }
-    }
-    return items.sort((a, b) => a.queueNumber - b.queueNumber);
+    const items = await db.query.queueItems.findMany({
+      with: {
+        patient: true,
+      },
+      orderBy: [queueItems.queueNumber],
+    });
+    return items;
   }
 
   async getQueueItem(id: string): Promise<QueueItemWithPatient | undefined> {
-    const queueItem = this.queueItems.get(id);
-    if (!queueItem) return undefined;
-
-    const patient = this.patients.get(queueItem.patientId);
-    if (!patient) return undefined;
-
-    return { ...queueItem, patient };
+    const item = await db.query.queueItems.findFirst({
+      where: eq(queueItems.id, id),
+      with: {
+        patient: true,
+      },
+    });
+    return item || undefined;
   }
 
   async createQueueItem(insertQueueItem: InsertQueueItem): Promise<QueueItemWithPatient> {
-    const id = randomUUID();
-    const queueItem: QueueItem = { 
-      ...insertQueueItem, 
-      id, 
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.queueItems.set(id, queueItem);
+    const [queueItem] = await db
+      .insert(queueItems)
+      .values(insertQueueItem)
+      .returning();
 
-    const patient = this.patients.get(queueItem.patientId);
+    const patient = await this.getPatient(queueItem.patientId);
     if (!patient) throw new Error("Patient not found");
 
     return { ...queueItem, patient };
   }
 
   async updateQueueItem(id: string, queueItemUpdate: Partial<InsertQueueItem>): Promise<QueueItemWithPatient | undefined> {
-    const existing = this.queueItems.get(id);
-    if (!existing) return undefined;
+    const [queueItem] = await db
+      .update(queueItems)
+      .set({ ...queueItemUpdate, updatedAt: new Date() })
+      .where(eq(queueItems.id, id))
+      .returning();
 
-    const updated: QueueItem = { 
-      ...existing, 
-      ...queueItemUpdate, 
-      updatedAt: new Date() 
-    };
-    this.queueItems.set(id, updated);
+    if (!queueItem) return undefined;
 
-    const patient = this.patients.get(updated.patientId);
+    const patient = await this.getPatient(queueItem.patientId);
     if (!patient) return undefined;
 
-    return { ...updated, patient };
+    return { ...queueItem, patient };
   }
 
   async deleteQueueItem(id: string): Promise<boolean> {
-    return this.queueItems.delete(id);
+    const result = await db.delete(queueItems).where(eq(queueItems.id, id));
+    return result.rowCount > 0;
   }
 
   async getNextQueueNumber(): Promise<number> {
-    const items = Array.from(this.queueItems.values());
-    if (items.length === 0) return 1;
-    return Math.max(...items.map(item => item.queueNumber)) + 1;
+    const [result] = await db.select({ maxQueueNumber: max(queueItems.queueNumber) }).from(queueItems);
+    return (result?.maxQueueNumber || 0) + 1;
   }
 
   // Appointment operations
   async getAppointments(): Promise<AppointmentWithDetails[]> {
-    const appointments: AppointmentWithDetails[] = [];
-    for (const appointment of this.appointments.values()) {
-      const patient = this.patients.get(appointment.patientId);
-      const doctor = this.doctors.get(appointment.doctorId);
-      if (patient && doctor) {
-        appointments.push({ ...appointment, patient, doctor });
-      }
-    }
-    return appointments.sort((a, b) => 
-      new Date(`${a.appointmentDate} ${a.appointmentTime}`).getTime() - 
-      new Date(`${b.appointmentDate} ${b.appointmentTime}`).getTime()
-    );
+    const appointmentList = await db.query.appointments.findMany({
+      with: {
+        patient: true,
+        doctor: true,
+      },
+      orderBy: [appointments.appointmentDate, appointments.appointmentTime],
+    });
+    return appointmentList;
   }
 
   async getAppointment(id: string): Promise<AppointmentWithDetails | undefined> {
-    const appointment = this.appointments.get(id);
-    if (!appointment) return undefined;
-
-    const patient = this.patients.get(appointment.patientId);
-    const doctor = this.doctors.get(appointment.doctorId);
-    if (!patient || !doctor) return undefined;
-
-    return { ...appointment, patient, doctor };
+    const appointment = await db.query.appointments.findFirst({
+      where: eq(appointments.id, id),
+      with: {
+        patient: true,
+        doctor: true,
+      },
+    });
+    return appointment || undefined;
   }
 
   async getAppointmentsByDate(date: string): Promise<AppointmentWithDetails[]> {
-    const allAppointments = await this.getAppointments();
-    return allAppointments.filter(appointment => appointment.appointmentDate === date);
+    const appointmentList = await db.query.appointments.findMany({
+      where: eq(appointments.appointmentDate, date),
+      with: {
+        patient: true,
+        doctor: true,
+      },
+      orderBy: [appointments.appointmentTime],
+    });
+    return appointmentList;
   }
 
   async createAppointment(insertAppointment: InsertAppointment): Promise<AppointmentWithDetails> {
-    const id = randomUUID();
-    const appointment: Appointment = { 
-      ...insertAppointment, 
-      id, 
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.appointments.set(id, appointment);
+    const [appointment] = await db
+      .insert(appointments)
+      .values(insertAppointment)
+      .returning();
 
-    const patient = this.patients.get(appointment.patientId);
-    const doctor = this.doctors.get(appointment.doctorId);
+    const patient = await this.getPatient(appointment.patientId);
+    const doctor = await this.getDoctor(appointment.doctorId);
     if (!patient || !doctor) throw new Error("Patient or Doctor not found");
 
     return { ...appointment, patient, doctor };
   }
 
   async updateAppointment(id: string, appointmentUpdate: Partial<InsertAppointment>): Promise<AppointmentWithDetails | undefined> {
-    const existing = this.appointments.get(id);
-    if (!existing) return undefined;
+    const [appointment] = await db
+      .update(appointments)
+      .set({ ...appointmentUpdate, updatedAt: new Date() })
+      .where(eq(appointments.id, id))
+      .returning();
 
-    const updated: Appointment = { 
-      ...existing, 
-      ...appointmentUpdate, 
-      updatedAt: new Date() 
-    };
-    this.appointments.set(id, updated);
+    if (!appointment) return undefined;
 
-    const patient = this.patients.get(updated.patientId);
-    const doctor = this.doctors.get(updated.doctorId);
+    const patient = await this.getPatient(appointment.patientId);
+    const doctor = await this.getDoctor(appointment.doctorId);
     if (!patient || !doctor) return undefined;
 
-    return { ...updated, patient, doctor };
+    return { ...appointment, patient, doctor };
   }
 
   async deleteAppointment(id: string): Promise<boolean> {
-    return this.appointments.delete(id);
+    const result = await db.delete(appointments).where(eq(appointments.id, id));
+    return result.rowCount > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
