@@ -8,6 +8,14 @@ This is a full-stack healthcare front desk management application built with Rea
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**January 27, 2025**: Successfully integrated PostgreSQL database with Drizzle ORM
+- Replaced in-memory storage with persistent database storage
+- Added database relations for proper data relationships
+- All patient data, appointments, queue items, and doctor information now persist
+- Application confirmed working with full functionality
+
 ## System Architecture
 
 ### Frontend Architecture
